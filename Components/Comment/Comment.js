@@ -28,7 +28,7 @@ styles= StyleSheet.create({
         flexDirection: 'column',
         backgroundColor: '#2f3640',
         width:350,
-        height:150,
+        height:170,
         borderRadius:20
     },
     authorInfoContainer:{
@@ -68,7 +68,7 @@ styles= StyleSheet.create({
         backgroundColor:"#dcdde1",
         borderRadius:5,
         alignItems:'center',
-        height:78,
+        height:90,
         marginTop:2
     }
 });

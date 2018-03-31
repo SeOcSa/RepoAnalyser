@@ -9,29 +9,46 @@ export default class App extends Component<Props> {
     constructor(props) {
         super(props);
         this.state= { repoOwner: "", repoName:"" , isLoading: true, hasData: true,
+            defaultUri:'https://avatars2.githubusercontent.com/u/12564956?v=4',
+            defaultName:'guest',
             numberOfAuthors:0, numberOfCommits: 0, numberOfEntities: 0, commitInfo: [], commentsString: ''};
     }
 
    async fetchCommitsAndCommitsComments(){
-        let path = 'https://api.github.com/repos/' +
-            this.state.repoOwner + '/' + this.state.repoName + '/commits?page=1&per_page=100';
         let data = [];
-        fetch(path)
-            .then((response) => response.json())
-            .then((jsonResponse)=>  {
-                console.log(jsonResponse);
-                jsonResponse.map( (commitObject) => {
-                    var item = new AuthorInfo(
-                        commitObject.author.id,
-                        commitObject.author.login,
-                        commitObject.author.avatar_url,
-                        commitObject.commit.message
-                    );
-                    data.push(item);
+        var pageCounter=1;
+        this.setState({numberOfCommits: 0, hasData:true});
+
+        while(true) {
+            if(this.state.hasData == false) break;
+
+            let path = 'https://api.github.com/repos/' +
+                this.state.repoOwner + '/' + this.state.repoName + '/commits?page='+pageCounter+'&per_page=100';
+            pageCounter++;
+
+            await fetch(path)
+                .then((response) => response.json())
+                .then((jsonResponse) => {
+                    if(jsonResponse.length ==0) this.setState({hasData: false});
+                    this.setState({numberOfCommits: this.state.numberOfCommits + jsonResponse.length});
+
+                    jsonResponse.map((commitObject) => {
+                        if (commitObject != null) {
+                            if (commitObject.author == null) {
+                                var item = new AuthorInfo(commitObject.sha, this.state.defaultName, this.state.defaultUri, commitObject.commit.message);
+                                data.push(item);
+                            }
+                            else {
+                                var item = new AuthorInfo(commitObject.sha, commitObject.author.login, commitObject.author.avatar_url, commitObject.commit.message);
+                                data.push(item);
+                            }
+                        }
                     });
-                this.setState({isLoading: false});
-            })
-            .catch((error) => console.log(error));
+
+                    this.setState({isLoading: false});
+                })
+                .catch((error) => console.log(error));
+        }
 
         this.setState({commitInfo: data});
     }
@@ -49,10 +66,7 @@ export default class App extends Component<Props> {
            await fetch(path)
                 .then((response) => response.json())
                 .then((jsonResponse) => {
-                    if(jsonResponse.length == 0) {
-                        this.setState({hasData: false});
-                    }
-
+                    if(jsonResponse.length == 0) this.setState({hasData: false});
                     this.setState({numberOfAuthors: this.state.numberOfAuthors + jsonResponse.length});
                 })
                 .catch((error) => console.log(error));
@@ -102,7 +116,7 @@ export default class App extends Component<Props> {
 
         this.showComments();
 
-        //await this.fetchNumberOfAuthors();
+        await this.fetchNumberOfAuthors();
 
         Alert.alert(
             'Result',
@@ -150,8 +164,9 @@ export default class App extends Component<Props> {
                 <FlatList
                     data={this.state.commitInfo}
                     renderItem={({item}) =>
-                        <Comment authorAvatarUri={item.avatarUri} authorName={item.userName}
+                        <Comment key={item.key} authorAvatarUri={item.avatarUri} authorName={item.userName}
                                  commitMessage={item.message}/>}
+
                 />
             </View>
         );
@@ -159,13 +174,13 @@ export default class App extends Component<Props> {
 }
 
 class AuthorInfo{
-    userId:string;
+    key:string;
     userName: string;
     avatarUri: string;
     message: string;
 
     constructor(userId: string, userName:string, avatarUri:string, message: string) {
-        this.userId= userId;
+        this.key= userId;
         this.userName= userName;
         this.avatarUri = avatarUri;
         this.message= message;
